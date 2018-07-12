@@ -2,7 +2,7 @@
 
 ## Securing get-restaurants endpoint with IAM-authorization
 
-**Goal:** The `get-restaurants` endpoint is protected by IAM
+**Goal:** Protect the `get-restaurants` endpoint is with IAM
 
 <details>
 <summary><b>Use AWS_IAM authorizer for get-restaurants endpoint</b></summary><p>
