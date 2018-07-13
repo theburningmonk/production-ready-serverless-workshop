@@ -2,7 +2,7 @@
 
 ## Add integration tests
 
-**Goal:** There are integration tests
+**Goal:** Write integration tests
 
 <details>
 <summary><b>Prepare tests</b></summary><p>
@@ -74,7 +74,7 @@ const viaHandler = async (event, functionName) => {
 
   const context = {}
   const response = await handler(event, context)
-  let contentType = _.get(response, 'headers.Content-Type', 'application/json');
+  const contentType = _.get(response, 'headers.Content-Type', 'application/json');
   if (response.body && contentType === 'application/json') {
     response.body = JSON.parse(response.body);
   }
