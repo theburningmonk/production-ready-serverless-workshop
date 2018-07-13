@@ -1,8 +1,8 @@
 # Module 8: Writing integration tests
 
-## Add test case for get-index
+## Add integration tests
 
-**Goal:** There is a test case for the get-index function
+**Goal:** There are integration tests
 
 <details>
 <summary><b>Prepare tests</b></summary><p>
