@@ -161,7 +161,24 @@ const response = {
 }
 ```
 
-8. Run the acceptance test
+8. Modify `steps/when.js` to look for `content-type` instead of `Content-Type`
+
+```javascript
+const viaHandler = async (event, functionName) => {
+  const handler = require(`${APP_ROOT}/functions/${functionName}`).handler
+  console.log(`invoking via handler function ${functionName}`)
+
+  const context = {}
+  const response = await handler(event, context)
+  const contentType = _.get(response, 'headers.content-type', 'application/json');
+  if (response.body && contentType === 'application/json') {
+    response.body = JSON.parse(response.body);
+  }
+  return response
+}
+```
+
+9. Run the acceptance test
 
 `npm run acceptance`
 
@@ -205,7 +222,235 @@ invoking via HTTP GET https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev
 </p></details>
 
 <details>
-<summary><b>Reuse search-restaurants test case for acceptance testing</b></summary><p>
+<summary><b>Modify search-restaurants test case for acceptance testing</b></summary><p>
 
+1. Install `chance` as a dev dependency
+
+`npm install --save-dev chance`
+
+2. Add a file `given.js` to `steps` folder
+
+3. Modify `steps/given.js` to the following
+
+```javascript
+const AWS = require('aws-sdk')
+AWS.config.region = 'us-east-1'
+const cognito = new AWS.CognitoIdentityServiceProvider()
+const chance  = require('chance').Chance()
+
+// needs number, special char, upper and lower case
+const random_password = () => `${chance.string({ length: 8})}B!gM0uth`
+
+const an_authenticated_user = async () => {
+  const userpoolId = process.env.cognito_user_pool_id
+  const clientId = process.env.cognito_server_client_id
+
+  const firstName = chance.first()
+  const lastName  = chance.last()
+  const username  = `test-${firstName}-${lastName}-${chance.string({length: 8})}`
+  const password  = random_password()
+  const email     = `${firstName}-${lastName}@big-mouth.com`
+
+  const createReq = {
+    UserPoolId        : userpoolId,
+    Username          : username,
+    MessageAction     : 'SUPPRESS',
+    TemporaryPassword : password,
+    UserAttributes    : [
+      { Name: "given_name",  Value: firstName },
+      { Name: "family_name", Value: lastName },
+      { Name: "email",       Value: email }
+    ]
+  }
+  await cognito.adminCreateUser(createReq).promise()
+
+  console.log(`[${username}] - user is created`)
+  
+  const req = {
+    AuthFlow        : 'ADMIN_NO_SRP_AUTH',
+    UserPoolId      : userpoolId,
+    ClientId        : clientId,
+    AuthParameters  : {
+      USERNAME: username,    
+      PASSWORD: password
+    }
+  }
+  const resp = await cognito.adminInitiateAuth(req).promise()
+
+  console.log(`[${username}] - initialised auth flow`)
+
+  const challengeReq = {
+    UserPoolId          : userpoolId,
+    ClientId            : clientId,
+    ChallengeName       : resp.ChallengeName,
+    Session             : resp.Session,
+    ChallengeResponses  : {
+      USERNAME: username,
+      NEW_PASSWORD: random_password()
+    }
+  }
+  const challengeResp = await cognito.adminRespondToAuthChallenge(challengeReq).promise()
+  
+  console.log(`[${username}] - responded to auth challenge`)
+
+  return {
+    username,
+    firstName,
+    lastName,
+    idToken: challengeResp.AuthenticationResult.IdToken
+  }
+}
+
+module.exports = {
+  an_authenticated_user
+}
+```
+
+This introduces a new env var `cognito_server_client_id` for the tests that we need to add to the `init` step. For this to work, we also need to use a real Cognito User Pool ID.
+
+4. Modify `steps/init.js` to use the real Cognito User Pool ID, and add the new env var, e.g.
+
+```javascript
+process.env.cognito_user_pool_id = "us-east-1_16bnZr2X5"
+process.env.cognito_client_id    = "test_cognito_client_id"
+process.env.cognito_server_client_id = "45ukim39plteivmrq49elgqn3v"
+```
+
+5. Add a file `tearDown.js` to the `steps` folder
+
+6. Modify `steps/tearDown.js` to the following
+
+```javascript
+const AWS = require('aws-sdk')
+AWS.config.region = 'us-east-1'
+const cognito = new AWS.CognitoIdentityServiceProvider()
+
+const an_authenticated_user = async (user) => {
+  let req = {
+    UserPoolId: process.env.cognito_user_pool_id,
+    Username: user.username
+  }
+  await cognito.adminDeleteUser(req).promise()
+  
+  console.log(`[${user.username}] - user deleted`)
+}
+
+module.exports = {
+  an_authenticated_user
+}
+```
+
+7. Modify `steps/when.js` so that when we search restaurants, we would do so as an authenticated user
+
+```javascript
+const we_invoke_search_restaurants = async (user, theme) => {
+  const body = JSON.stringify({ theme })
+  const auth = user.idToken
+
+  const res = 
+    mode === 'handler'
+      ? viaHandler({ body }, 'search-restaurants')
+      : viaHttp('restaurants/search', 'POST', { body, auth })
+
+  return res
+}
+```
+
+8. Modify `test_cases/search-restaurants.js` so we would search restaurants as an authenticated user
+
+```javascript
+const { expect } = require('chai')
+const { init } = require('../steps/init')
+const when = require('../steps/when')
+const tearDown = require('../steps/tearDown')
+const given = require('../steps/given')
+
+describe('Given an authorised user', () => {
+  let user
+
+  before(async () => {
+    await init()
+    user = await given.an_authenticated_user()
+  })
+
+  after(async () => {
+    await tearDown.an_authenticated_user(user)
+  })
+
+  describe(`When we invoke the POST /restaurants/search endpoint with theme 'cartoon'`, () => {
+    before(async () => await init())
+  
+    it(`Should return an array of 4 restaurants`, async () => {
+      let res = await when.we_invoke_search_restaurants(user, 'cartoon')
+  
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.have.lengthOf(4)
+  
+      for (let restaurant of res.body) {
+        expect(restaurant).to.have.property('name')
+        expect(restaurant).to.have.property('image')
+      }
+    })
+  })
+})
+```
+
+9. Run the acceptance tests
+
+`npm run acceptance`
+
+and see that all 3 tests are passing
+
+```
+  When we invoke the GET / endpoint
+AWS credential loaded
+invoking via HTTP GET https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev/
+    ✓ Should return the index page with 8 restaurants (454ms)
+
+  When we invoke the GET /restaurants endpoint
+invoking via HTTP GET https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev/restaurants
+    ✓ Should return an array of 8 restaurants (312ms)
+
+  Given an authorised user
+[test-Evelyn-Capecchi-f!!O[cz*] - user is created
+[test-Evelyn-Capecchi-f!!O[cz*] - initialised auth flow
+[test-Evelyn-Capecchi-f!!O[cz*] - responded to auth challenge
+    When we invoke the POST /restaurants/search endpoint with theme 'cartoon'
+invoking via HTTP POST https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev/restaurants/search
+      ✓ Should return an array of 4 restaurants (1443ms)
+[test-Evelyn-Capecchi-f!!O[cz*] - user deleted
+
+
+  3 passing (4s)
+```
+
+10. Run the integration tests
+
+and see that all 3 tests are still passing as well
+
+```
+  When we invoke the GET / endpoint
+AWS credential loaded
+invoking via handler function get-index
+loading index.html...
+loaded
+    ✓ Should return the index page with 8 restaurants (881ms)
+
+  When we invoke the GET /restaurants endpoint
+invoking via handler function get-restaurants
+    ✓ Should return an array of 8 restaurants (1281ms)
+
+  Given an authorised user
+[test-Leonard-West-N0%4KVxS] - user is created
+[test-Leonard-West-N0%4KVxS] - initialised auth flow
+[test-Leonard-West-N0%4KVxS] - responded to auth challenge
+    When we invoke the POST /restaurants/search endpoint with theme 'cartoon'
+invoking via handler function search-restaurants
+      ✓ Should return an array of 4 restaurants (281ms)
+[test-Leonard-West-N0%4KVxS] - user deleted
+
+
+  3 passing (5s)
+```
 
 </p></details>
