@@ -365,7 +365,7 @@ const when = require('../steps/when')
 const tearDown = require('../steps/tearDown')
 const given = require('../steps/given')
 
-describe('Given an authorised user', () => {
+describe('Given an authenticated user', () => {
   let user
 
   before(async () => {
@@ -411,7 +411,7 @@ invoking via HTTP GET https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev
 invoking via HTTP GET https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev/restaurants
     ✓ Should return an array of 8 restaurants (312ms)
 
-  Given an authorised user
+  Given an authenticated user
 [test-Evelyn-Capecchi-f!!O[cz*] - user is created
 [test-Evelyn-Capecchi-f!!O[cz*] - initialised auth flow
 [test-Evelyn-Capecchi-f!!O[cz*] - responded to auth challenge
@@ -440,7 +440,7 @@ loaded
 invoking via handler function get-restaurants
     ✓ Should return an array of 8 restaurants (1281ms)
 
-  Given an authorised user
+  Given an authenticated user
 [test-Leonard-West-N0%4KVxS] - user is created
 [test-Leonard-West-N0%4KVxS] - initialised auth flow
 [test-Leonard-West-N0%4KVxS] - responded to auth challenge
