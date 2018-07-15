@@ -20,9 +20,10 @@ const chance  = require('chance').Chance()
 
 const streamName = process.env.order_events_stream
 const topicArn = process.env.restaurant_notification_topic
+const failureRate = process.env.failure_rate || 75 // 75% chance of failure
 
 const restaurantOfOrder = async (order) => {
-  if (chance.bool({likelihood: 75})) { // 75% chance of failure
+  if (chance.bool({likelihood: failureRate})) {
     throw new Error("boom")
   }
 
@@ -50,7 +51,7 @@ module.exports = {
 }
 ```
 
-This is basically lifted from the `notify-restaurant` function, and we have introduced a 75% error rate so we can force messages to go down the retry path.
+This is basically lifted from the `notify-restaurant` function, and we have introduced a default 75% error rate so we can force messages to go down the retry path.
 
 3. Add a file `retry.js` to the `lib` folder
 
@@ -111,6 +112,12 @@ module.exports.handler = async (event, context) => {
 ```
 
 Notice how we have moved all the logif for notifying the restaurant into a shared module in the `lib` folder, which can be used from another Lambda function during retry.
+
+10. Modify `steps/init.js` and set failure rate to 0 so our acceptance tests don't fail
+
+```javascript
+process.env.failure_rate = 0
+```
 
 </p></details>
 
@@ -203,7 +210,11 @@ To subscribe the function to an existing SNS topic, you need to specify both the
     - Ref: restaurantNotificationDLQTopic
 ```
 
-7. Deploy the project
+7. Run integration tests to make sure they still pass
+
+`STAGE=dev REGION=us-east-1 npm run test`
+
+8. Deploy the project
 
 `npm run sls -- deploy -s dev -r us-east-1`
 
@@ -257,3 +268,10 @@ You should receive a number of emails from SNS of three variants:
 * dead-letter queued
 
 ![](/images/mod15-008.png)
+
+## Exercises
+
+<details>
+<summary><b>Subscribe yourself to the SNS topics</b></summary><p>
+
+</p></details>
