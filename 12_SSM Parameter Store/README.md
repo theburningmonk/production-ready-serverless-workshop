@@ -32,7 +32,7 @@
 <details>
 <summary><b>Use SSM to parameterise serverless.yml</b></summary><p>
 
-1. Replace the `restaurants_table` environment variable for `get-restaurants` and `search-restaurants` functions with `${ssm:/{service-name}/dev/table_name}` (don't forget to replace `service-name` with what you used in the previous step):
+1. Replace the `restaurants_table` environment variable for `get-restaurants` and `search-restaurants` functions with `${ssm:/{service-name}/dev/table_name}` (don't forget to replace `service-name` with what you used in the previous step). Whilst we're here, also update the `arn` for the `search-restaurants`'s `authorizer` to `${ssm:/workshop-yancui/dev/cognito_user_pool_id}`
 
 ```yml
 get-restaurants:
@@ -52,7 +52,7 @@ search-restaurants:
         path: /restaurants/search
         method: post
         authorizer:
-          arn: arn:aws:cognito-idp:#{AWS::Region}:#{AWS::AccountId}:userpool/us-east-1_16bnZr2X5
+          arn: arn:aws:cognito-idp:#{AWS::Region}:#{AWS::AccountId}:userpool/${ssm:/workshop-yancui/dev/cognito_user_pool_id}
   environment:
     restaurants_table: ${ssm:/workshop-yancui/dev/table_name}
 ```
