@@ -176,10 +176,11 @@ describe('Given an authenticated user', () => {
 
     after(() => AWS.restore('Kinesis', 'putRecord'))
   
-    it(`Should publish a message to Kinesis stream and return 200`, async () => {
-      const res = await when.we_invoke_place_order(user, 'Fangtasia')
+    it(`Should return 200`, async () => {
+      expect(resp.statusCode).to.equal(200)
+    })
   
-      expect(res.statusCode).to.equal(200)
+    it(`Should publish a message to Kinesis stream`, async () => {
       expect(isEventPublished).to.be.true
     })
   })
@@ -243,7 +244,8 @@ invoking via handler function get-restaurants
 invoking via handler function place-order
 placing order ID [8d16297b-4a99-5cb4-a15e-13feb1e7bd97] to [Fangtasia] for user [test-Leah-Ciani-&#j2AVB!@test.com]
 published 'order_placed' event into Kinesis
-      ✓ Should publish a message to Kinesis stream and return 200
+      ✓ Should return 200
+      ✓ Should publish a message to Kinesis stream
 [test-Leah-Ciani-&#j2AVB!] - user deleted
 
   Given an authenticated user
@@ -266,7 +268,7 @@ invoking via handler function search-restaurants
 </p></details>
 
 <details>
-<summary><b>Add integration test for place-order function</b></summary><p>
+<summary><b>Add acceptance test for place-order function</b></summary><p>
 
 When executing the deployed `place-order` function via API Gateway, the function would publish an `order_placed` event to the real Kinesis stream.
 
@@ -283,15 +285,15 @@ For this workshop, we'll take a short-cut and only validate Kinesis was called w
 1. Modify `test_cases/place-order.js` so the test case no longer validates Kinesis event is published when running as an acceptance test
 
 ```javascript
-it(`Should publish a message to Kinesis stream and return 200`, async () => {
-  const res = await when.we_invoke_place_order(user, 'Fangtasia')
-
-  expect(res.statusCode).to.equal(200)
-
-  if (process.env.TEST_MODE === 'handler') {
-    expect(isEventPublished).to.be.true
-  }
+it(`Should return 200`, async () => {
+  expect(resp.statusCode).to.equal(200)
 })
+
+if (process.env.TEST_MODE === 'handler') {
+  it(`Should publish a message to Kinesis stream`, async () => {
+    expect(isEventPublished).to.be.true
+  })
+}
 ```
 
 2. Run acceptance test
@@ -317,7 +319,7 @@ invoking via HTTP GET https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev
 [test-Mario-Hughes-RfIs4]%e] - responded to auth challenge
     When we invoke the POST /orders endpoint
 invoking via HTTP POST https://exun14zd2h.execute-api.us-east-1.amazonaws.com/dev/orders
-      ✓ Should publish a message to Kinesis stream and return 200 (1024ms)
+      ✓ Should return 200
 [test-Mario-Hughes-RfIs4]%e] - user deleted
 
   Given an authenticated user
@@ -997,6 +999,189 @@ notify-restaurant:
 <details>
 <summary><b>Add integration test for notify-restaurant function</b></summary><p>
 
+1. Modify `steps/init.js` to load `restaurant_topic_name` from SSM parameter store
 
+```javascript
+const params = await getParameters([
+  'restaurant_topic_name',
+  'stream_name',    
+  'table_name', 
+  'cognito_user_pool_id', 
+  'cognito_web_client_id',
+  'cognito_server_client_id',
+  'url'
+])
+```
+
+and use it to set `restaurant_notification_topic` environment variable the `notify-restaurant` function depends on
+
+```javascript
+process.env.restaurant_notification_topic = params.restaurant_topic_name
+```
+
+2. Modify `steps/when.js` to add a `we_invoke_notify_restaurant` function
+
+```javascript
+const we_invoke_notify_restaurant = async (...events) => {
+  if (mode === 'handler') {
+    await viaHandler(toKinesisEvent(events), 'notify-restaurant')
+  } else {
+    throw new Error('not supported')
+  }
+}
+
+module.exports = {
+  we_invoke_get_index,
+  we_invoke_get_restaurants,
+  we_invoke_search_restaurants,
+  we_invoke_place_order,
+  we_invoke_notify_restaurant
+}
+```
+
+3. Modify `steps/when.js` to add a `toKinesisEvent` function
+
+```javascript
+const toKinesisEvent = events => {
+  const records = events.map(event => {
+    const data = Buffer.from(JSON.stringify(event)).toString('base64')
+    return {
+      "eventID": "shardId-000000000000:49545115243490985018280067714973144582180062593244200961",
+      "eventVersion": "1.0",
+      "kinesis": {
+        "approximateArrivalTimestamp": 1428537600,
+        "partitionKey": "partitionKey-3",
+        "data": data,
+        "kinesisSchemaVersion": "1.0",
+        "sequenceNumber": "49545115243490985018280067714973144582180062593244200961"
+      },
+      "invokeIdentityArn": "arn:aws:iam::EXAMPLE",
+      "eventName": "aws:kinesis:record",
+      "eventSourceARN": "arn:aws:kinesis:EXAMPLE",
+      "eventSource": "aws:kinesis",
+      "awsRegion": "us-east-1"
+    }
+  })
+
+  return {
+    Records: records
+  }
+}
+```
+
+4. Run integration tests
+
+`STAGE=dev REGION=us-east-1 npm run test`
+
+and see that the new test is failing
+
+```
+1) When we invoke the notify-restaurant function
+      "before all" hook:
+    TypeError: Cannot read property 'body' of undefined
+    at viaHandler (tests/steps/when.js:84:16)
+    at <anonymous>
+```
+
+because our `notify-restaurant` doesn't return any response because it doesn't need to.
+
+5. Modify `steps/when.js` to update the `viaHandler` function to handle this
+
+```javascript
+const viaHandler = async (event, functionName) => {
+  const handler = require(`${APP_ROOT}/functions/${functionName}`).handler
+  console.log(`invoking via handler function ${functionName}`)
+
+  const context = {}
+  const response = await handler(event, context)
+  const contentType = _.get(response, 'headers.content-type', 'application/json');
+  if (_.get(response, 'body') && contentType === 'application/json') {
+    response.body = JSON.parse(response.body);
+  }
+  return response
+}
+```
+
+6. Rerun integration tests
+
+`STAGE=dev REGION=us-east-1 npm run test`
+
+and see that all tests are passing now
+
+```
+  When we invoke the GET / endpoint
+SSM params loaded
+AWS credential loaded
+invoking via handler function get-index
+loading index.html...
+loaded
+    ✓ Should return the index page with 8 restaurants (367ms)
+
+  When we invoke the GET /restaurants endpoint
+invoking via handler function get-restaurants
+    ✓ Should return an array of 8 restaurants (532ms)
+
+  When we invoke the notify-restaurant function
+invoking via handler function notify-restaurant
+notified restaurant [Fangtasia] of order [5e8f5bd3-234d-582c-b138-73d31afbb3fe]
+published 'restaurant_notified' event to Kinesis
+    ✓ Should publish message to SNS
+    ✓ Should publish event to Kinesis
+
+  Given an authenticated user
+[test-Lina-Catarzi-0%sG^VPl] - user is created
+[test-Lina-Catarzi-0%sG^VPl] - initialised auth flow
+[test-Lina-Catarzi-0%sG^VPl] - responded to auth challenge
+    When we invoke the POST /orders endpoint
+invoking via handler function place-order
+placing order ID [6ebe25d7-9d2d-5549-89c3-24b22766440f] to [Fangtasia] for user [test-Lina-Catarzi-0%sG^VPl@test.com]
+published 'order_placed' event into Kinesis
+      ✓ Should return 200
+      ✓ Should publish a message to Kinesis stream
+[test-Lina-Catarzi-0%sG^VPl] - user deleted
+
+  Given an authenticated user
+[test-Bradley-Kuiper-rJtlGV5T] - user is created
+[test-Bradley-Kuiper-rJtlGV5T] - initialised auth flow
+[test-Bradley-Kuiper-rJtlGV5T] - responded to auth challenge
+    When we invoke the POST /restaurants/search endpoint with theme 'cartoon'
+invoking via handler function search-restaurants
+      ✓ Should return an array of 4 restaurants (253ms)
+[test-Bradley-Kuiper-rJtlGV5T] - user deleted
+
+
+  7 passing (5s)
+```
+
+</p></details>
+
+<details>
+<summary><b>Add acceptance test for notify-restaurant function</b></summary><p>
+
+We can publish a Kinesis event via the AWS SDK to execute the deployed `notify-restaurant` function. Since this function publishes to both SNS and Kinesis, we have the same conumdrum in verifying that it's producing the expected side-effects as the `place-order` function.
+
+The same options we discussed earlier apply here, with regards to verifying the `restaurant_notified` event is published to Kinesis.
+
+But how do we verify that SNS message has notified? And what if we had used SES as we intended initially?
+
+To verify that an email was received, we could subscribe a test email address to the SNS topic (or whitelist it in the case of SES). Then we can programmatically (e.g. Gmail has an API which we can use to read our emails) check our inbox and see if we had received the notification email.
+
+For this workshop, we'll take a short-cut and skip the test altogether.
+
+1. Modify `test_cases/notify-restaurant.js` so the test case only executes as integration test
+
+```javascript
+if (process.env.TEST_MODE === 'handler') {
+  describe(`When we invoke the notify-restaurant function`, () => {
+    ...
+  })
+}
+```
+
+2. Run acceptance test
+
+`STAGE=dev REGION=us-east-1 npm run acceptance`
+
+and see that all the tests are passing
 
 </p></details>

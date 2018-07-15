@@ -237,6 +237,8 @@ loaded
 
 </p></details>
 
+If you find that some tests fails sporadically, they might just need longer to run. Try raising the test timeout with `--timeout 5000`, the default timeout is 2s.
+
 ## Exercises
 
 <details>
