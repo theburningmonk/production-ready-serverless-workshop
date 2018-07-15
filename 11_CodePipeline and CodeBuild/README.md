@@ -80,7 +80,7 @@ Fortunately, this first build is doomed to fail because we haven't created a `bu
 </p></details>
 
 <details>
-<summary><b>Setup buildspec.yml</b></summary><p>
+<summary><b>Add buildspec.yml</b></summary><p>
 
 1. Add a file `buildspec.yml` under the project's root folder
 
@@ -95,8 +95,110 @@ phases:
       - npm install
       - npm test
       - npm run sls -- deploy -s $STAGE -r $REGION
+      - npm run acceptance
 ```
 
+3. Modify the `steps/init.js` to add another env variable `AWS_SESSION_TOKEN`, as the build steps are executed in an ECS task (which uses temp credentials by assuming the assigned IAM role).
 
+```javascript
+process.env.AWS_ACCESS_KEY_ID     = credentials.accessKeyId
+process.env.AWS_SECRET_ACCESS_KEY = credentials.secretAccessKey
+
+if (credentials.sessionToken) {
+  process.env.AWS_SESSION_TOKEN = credentials.sessionToken
+}
+```
+
+4. CodeBuild would require many permissions in order to deploy our serverless project. Go to the IAM console, and look for the role that starts with `code-build-workshop-dev-`.
+
+5. Click `Attach policies`
+
+6. Select `AdministratorAccess` and click `Attach policy`
+
+7. Commit and push your code changes to kick off the pipeline.
+
+If all goes well, you should see the pipeline execute successfully and the functions will be deployed by the pipeline.
+
+![](/images/mod11-011.png)
+
+![](/images/mod11-010.png)
+
+</p></details>
+
+<details>
+<summary><b>Extend the pipeline to deploy to staging environment</b></summary><p>
+
+1. Go back to your pipeline screen, click `Edit`
+
+2. Add a stage after `Build`, call it `Staging`
+
+3. Choose `Build` for `Action category`
+
+4. Use `CodeBuild` for `Action name`
+
+5. Choose `AWS CodeBuild` for `Build provider`
+
+6. Choose `Create a new build project`
+
+7. Use the name `workshop-staging-` followed by your name, e.g. `workshop-staging-yancui`
+
+![](/images/mod11-012.png)
+
+8. Choose `Use an image managed by AWS CodeBuild`, and use `Ubuntu`, `Node.js` and `aws/codebuild/nodejs:8.11.0`
+
+![](/images/mod11-013.png)
+
+9. Choose `Use the buildspec.yml in the source code root directory`
+
+10. Leave `Cache` and `VPC` options as the default
+
+11. Under `Advanced`, `Environment variables`, add the `STAGE` and `REGION` environment variables to make the npm build script deploy to a `staging` stage in `us-east-1` region instead.
+
+![](/images/mod11-014.png)
+
+12. Click `Save build project`
+
+13. Choose `MyApp` as `Input artifacts`
+
+14. Click `Add action`
+
+15. Click `Save pipeline changes`, and then `Save and continue` in the subsequent popup
+
+16. Go to the IAM console
+
+17. CodeBuild would require many permissions in order to deploy our serverless project. Go to the IAM console, and look for the role that starts with `code-build-workshop-staging-`.
+
+18. Click `Attach policies`
+
+19. Select `AdministratorAccess` and click `Attach policy`
+
+20. Go back to the CodePipeline console, and go into our `workshop-yancui` pipeline
+
+21. Click `Release change` to kick off the pipeline
+
+22. This will fail because the DynamoDB table is not parameterised by stage
+
+![](/images/mod11-015.png)
+
+Even if we parameterise everything in the `serverless.yml`, we'd have to parameterise the tests as well.
+
+</p></details>
+
+## Exercise
+
+<details>
+<summary><b>Separate steps for test, deploy and acceptance</b></summary><p>
+
+Instead of relying on `buildspec.yml` to do everything - integration tests, deploy and acceptance tests - in one giant step, how about we separate them into multiple steps for each environment?
+
+Delete the existing `Build` step, and create a `Dev` that has 3 clear steps:
+
+* IntegrationTest
+
+* Deploy
+
+* AcceptanceTest
+
+![](/images/mod11-016.png)
 
 </p></details>
