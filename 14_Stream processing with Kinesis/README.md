@@ -1156,7 +1156,7 @@ invoking via handler function search-restaurants
 </p></details>
 
 <details>
-<summary><b>Add acceptance test for notify-restaurant function</b></summary><p>
+<summary><b>Acceptance test for notify-restaurant function</b></summary><p>
 
 We can publish a Kinesis event via the AWS SDK to execute the deployed `notify-restaurant` function. Since this function publishes to both SNS and Kinesis, we have the same conumdrum in verifying that it's producing the expected side-effects as the `place-order` function.
 
