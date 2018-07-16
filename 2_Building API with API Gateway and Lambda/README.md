@@ -271,6 +271,32 @@ get-restaurants:
 </p></details>
 
 <details>
+<summary><b>Configure IAM permission</b></summary><p>
+
+1. Modify `serverless.yml` and add an `iamRoleStatements` section under `provider`:
+
+```yml
+provider:
+  name: aws
+  runtime: nodejs8.10
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action: dynamodb:scan
+      Resource:
+        Fn::GetAtt:
+          - restaurantsTable
+          - Arn
+```
+
+This adds the `dynamodb:scan` permission to the Lambda execution role.
+
+2. Deploy the project
+
+`npm run sls -- deploy`
+</p></details>
+
+<details>
 <summary><b>Add a DynamoDB table in the serverless.yml</b></summary><p>
 
 1. Add DynamoDB table to `serverless.yml`
@@ -365,28 +391,6 @@ dynamodb.batchWrite(req).promise().then(() => console.log("all done"))
 
 `node seed-restaurants.js`
 
-</p></details>
-
-<details>
-<summary><b>Configure IAM permission</b></summary><p>
-
-1. Modify `serverless.yml` and add an `iamRoleStatements` section under `provider`:
-
-```yml
-provider:
-  name: aws
-  runtime: nodejs8.10
-
-  iamRoleStatements:
-    - Effect: Allow
-      Action: dynamodb:scan
-      Resource:
-        Fn::GetAtt:
-          - restaurantsTable
-          - Arn
-```
-
-This adds the `dynamodb:scan` permission to the Lambda execution role.
 </p></details>
 
 ## Displaying restaurants in the landing page

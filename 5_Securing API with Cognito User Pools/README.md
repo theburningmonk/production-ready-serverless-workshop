@@ -58,7 +58,7 @@ module.exports.handler = async (event, context) => {
 
 4. Deploy the serverless project
 
-`npm run sls -- deploy -s dev -r eu-central-1`
+`npm run sls -- deploy -s dev -r us-east-1`
 
 5. Curl the `/restaurants/search` endpoint for the `cartoon` theme
 
