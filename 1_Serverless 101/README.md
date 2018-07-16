@@ -153,7 +153,7 @@ Congratulations! You have successfully successfully created and deployed your fi
 <details>
 <summary><b>Deploy to another stage/environment</b></summary><p>
 
-1. Deploy the project to a `test` stage (aka environment) with `npm sls -- deploy --stage test`
+1. Deploy the project to a `test` stage (aka environment) with `npm run sls -- deploy --stage test`
 
 2. Go to API Gateway console to see that another API has been created for the `test` stage
 
@@ -170,7 +170,7 @@ Congratulations! You have successfully successfully created and deployed your fi
 
 2. Modify the `serverless.yml` and add descriptions to the functions
 
-3. Deploy the functions with `npm sls -- deploy`
+3. Deploy the functions with `npm run sls -- deploy`
 
 4. Go to the Lambda console to see the functions have been updated with descriptions
 
@@ -183,7 +183,7 @@ The Serverless framework enforces a naming convention, but you can override the 
 
 1. Consult the [Serverless framework docs](https://serverless.com/framework/docs/providers/aws/guide/serverless.yml/) to see how you can override function names
 
-2. Deploy the functions with `npm sls -- deploy`
+2. Deploy the functions with `npm run sls -- deploy`
 
 3. Go to the Lambda console to see the functions have been renamed
 
@@ -208,7 +208,7 @@ provider:
 
 3. Make a small change to the function (e.g. change the `message` in the `response`)
 
-4. Deploy with `npm sls -- deploy`
+4. Deploy with `npm run sls -- deploy`
 
 5. Go to the Lambda console to see if the version number is incremented
 
@@ -219,7 +219,7 @@ provider:
 <details>
 <summary><b>Removing the project</b></summary><p>
 
-1. Delete the deployed functions and APIs with `sls remove`
+1. Delete the deployed functions and APIs with `npm run sls -- remove`
 
 2. Go to the Lambda console to see the deployed functions are deleted
 
