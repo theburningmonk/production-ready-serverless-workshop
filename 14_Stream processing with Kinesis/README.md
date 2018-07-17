@@ -224,44 +224,40 @@ module.exports = {
 
 `STAGE=dev REGION=us-east-1 npm run test`
 
-and see that all 4 tests are passing
+and see that all 5 tests are passing
 
 ```
   When we invoke the GET / endpoint
 SSM params loaded
 AWS credential loaded
-invoking via handler function get-index
 loading index.html...
 loaded
-    ✓ Should return the index page with 8 restaurants (401ms)
+    ✓ Should return the index page with 8 restaurants (1277ms)
 
   When we invoke the GET /restaurants endpoint
-invoking via handler function get-restaurants
-    ✓ Should return an array of 8 restaurants (331ms)
+    ✓ Should return an array of 8 restaurants (176ms)
 
   Given an authenticated user
-[test-Leah-Ciani-&#j2AVB!] - user is created
-[test-Leah-Ciani-&#j2AVB!] - initialised auth flow
-[test-Leah-Ciani-&#j2AVB!] - responded to auth challenge
+[test-Verna-Chamberlain] - user is created
+[test-Verna-Chamberlain] - initialised auth flow
+[test-Verna-Chamberlain] - responded to auth challenge
     When we invoke the POST /orders endpoint
-invoking via handler function place-order
-placing order ID [8d16297b-4a99-5cb4-a15e-13feb1e7bd97] to [Fangtasia] for user [test-Leah-Ciani-&#j2AVB!@test.com]
+placing order ID [c861c9fa-b1ed-52a6-9e60-24ba455e8a4d] to [Fangtasia] for user [test-Verna-Chamberlain@test.com]
 published 'order_placed' event into Kinesis
       ✓ Should return 200
       ✓ Should publish a message to Kinesis stream
-[test-Leah-Ciani-&#j2AVB!] - user deleted
+[test-Verna-Chamberlain] - user deleted
 
   Given an authenticated user
-[test-Lelia-Howard-^S7pC8Su] - user is created
-[test-Lelia-Howard-^S7pC8Su] - initialised auth flow
-[test-Lelia-Howard-^S7pC8Su] - responded to auth challenge
+[test-Jack-Paci] - user is created
+[test-Jack-Paci] - initialised auth flow
+[test-Jack-Paci] - responded to auth challenge
     When we invoke the POST /restaurants/search endpoint with theme 'cartoon'
-invoking via handler function search-restaurants
-      ✓ Should return an array of 4 restaurants (334ms)
-[test-Lelia-Howard-^S7pC8Su] - user deleted
+      ✓ Should return an array of 4 restaurants (91ms)
+[test-Jack-Paci] - user deleted
 
 
-  4 passing (4s)
+  5 passing (4s)
 ```
 
 7. Deploy the project
