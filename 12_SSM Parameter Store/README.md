@@ -32,7 +32,7 @@
 <details>
 <summary><b>Use SSM to parameterise serverless.yml</b></summary><p>
 
-1. Replace the `restaurants_table` environment variable for `get-restaurants` and `search-restaurants` functions with `${ssm:/{service-name}/dev/table_name}` (don't forget to replace `service-name` with what you used in the previous step). Whilst we're here, also update the `arn` for the `search-restaurants`'s `authorizer` to `${ssm:/workshop-yancui/dev/cognito_user_pool_id}`
+1. Replace the `restaurants_table` environment variable for `get-restaurants` and `search-restaurants` functions with `${ssm:/${self:service}/${opt:stage}/table_name}`. Whilst we're here, also update the `arn` for the `search-restaurants`'s `authorizer` to `${ssm:/${self:service}/${opt:stage}/cognito_user_pool_id}`
 
 ```yml
 get-restaurants:
@@ -43,7 +43,7 @@ get-restaurants:
         method: get
         authorizer: aws_iam
   environment:
-    restaurants_table: ${ssm:/workshop-yancui/dev/table_name}
+    restaurants_table: ${ssm:/${self:service}/${opt:stage}/table_name}
 
 search-restaurants:
   handler: functions/search-restaurants.handler
@@ -52,12 +52,12 @@ search-restaurants:
         path: /restaurants/search
         method: post
         authorizer:
-          arn: arn:aws:cognito-idp:#{AWS::Region}:#{AWS::AccountId}:userpool/${ssm:/workshop-yancui/dev/cognito_user_pool_id}
+          arn: arn:aws:cognito-idp:#{AWS::Region}:#{AWS::AccountId}:userpool/${ssm:/${self:service}/${opt:stage}/cognito_user_pool_id}
   environment:
-    restaurants_table: ${ssm:/workshop-yancui/dev/table_name}
+    restaurants_table: ${ssm:/${self:service}/${opt:stage}/table_name}
 ```
 
-2. Replace the `TableName` for the DynamoDB table with `${ssm:/{service-name}/dev/table_name}`
+2. Replace the `TableName` for the DynamoDB table with `${ssm:/${self:service}/${opt:stage}/table_name}`
 
 ```yml
 resources:
@@ -65,7 +65,7 @@ resources:
     restaurantsTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${ssm:/workshop-yancui/dev/table_name}
+        TableName: ${ssm:/${self:service}/${opt:stage}/table_name}
         AttributeDefinitions:
           - AttributeName: name
             AttributeType: S
@@ -77,7 +77,7 @@ resources:
           WriteCapacityUnits: 1
 ```
 
-3. Replace the `cognito_user_pool_id` and `cognito_client_id` environment variables for the `get-index` function with `${ssm:/{service-name}/dev/cognito_user_pool_id}` and `${ssm:/{service-name}/dev/cognito_web_client_id` respectively
+3. Replace the `cognito_user_pool_id` and `cognito_client_id` environment variables for the `get-index` function with `${ssm:/${self:service}/${opt:stage}/cognito_user_pool_id}` and `${ssm:/${self:service}/${opt:stage}/cognito_web_client_id}` respectively
 
 ```yml
 get-index:
@@ -93,8 +93,8 @@ get-index:
         - - "https://"
           - Ref: ApiGatewayRestApi
           - ".execute-api.${opt:region}.amazonaws.com/${opt:stage}/restaurants"
-    cognito_user_pool_id: ${ssm:/{service-name}/dev/cognito_user_pool_id}
-    cognito_client_id: ${ssm:/{service-name}/dev/cognito_web_client_id}
+    cognito_user_pool_id: ${ssm:/${self:service}/${opt:stage}/cognito_user_pool_id}
+    cognito_client_id: ${ssm:/${self:service}/${opt:stage}/cognito_web_client_id}
 ```
 
 4. Deploy the project
@@ -164,7 +164,7 @@ let restaurants = [
 const getTableName = async () => {
   console.log('getting table name...')
   const req = {
-    Name: `/workshop-yancui/${STAGE}/table_name`
+    Name: `/{replace this with what you used in SSM}/${STAGE}/table_name`
   }
   const ssmResp = await ssm.getParameter(req).promise()
   return ssmResp.Parameter.Value
@@ -190,6 +190,8 @@ const run = async () => {
 
 run().then(() => console.log("all done")).catch(err => console.error(err.message))
 ```
+
+**REMINDER**: don't forget to replace the SSM parameter path with what you used in your `serverless.yml`
 
 2. Rerun the script
 

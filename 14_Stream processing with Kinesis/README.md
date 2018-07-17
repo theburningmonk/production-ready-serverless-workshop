@@ -161,6 +161,7 @@ describe('Given an authenticated user', () => {
 
   describe(`When we invoke the POST /orders endpoint`, () => {
     let isEventPublished = false
+    let resp
   
     before(async () => {
       AWS.mock('Kinesis', 'putRecord', (req) => {
@@ -172,6 +173,8 @@ describe('Given an authenticated user', () => {
           promise: async () => {}
         }
       })
+
+      resp = await when.we_invoke_place_order(user, 'Fangtasia')
     })
 
     after(() => AWS.restore('Kinesis', 'putRecord'))
