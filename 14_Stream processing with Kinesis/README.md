@@ -1068,7 +1068,71 @@ const toKinesisEvent = events => {
 }
 ```
 
-4. Run integration tests
+4. Add a file `notify-restaurant.js` to the `test_cases` folder
+
+5. Modify `test_cases/notify-restaurant.js` to the following
+
+```javascript
+const { expect } = require('chai')
+const { init } = require('../steps/init')
+const when = require('../steps/when')
+const AWS = require('mock-aws')
+const chance = require('chance').Chance()
+
+describe(`When we invoke the notify-restaurant function`, () => {
+  let isEventPublished = false
+  let isNotified = false
+
+  before(async () => {
+    await init()
+
+    AWS.mock('Kinesis', 'putRecord', (req) => {
+      isEventPublished = 
+        req.StreamName === process.env.order_events_stream &&
+        JSON.parse(req.Data).eventType === 'restaurant_notified'
+
+      return {
+        promise: async () => {}
+      }
+    })
+
+    AWS.mock('SNS', 'publish', (req) => {
+      isNotified = 
+        req.TopicArn === process.env.restaurant_notification_topic &&
+        JSON.parse(req.Message).eventType === 'order_placed'
+
+      return {
+        promise: async () => {}
+      }
+    })
+
+    const event = {
+      orderId: chance.guid(),
+      userEmail: chance.email(),
+      restaurantName: 'Fangtasia',
+      eventType: 'order_placed'
+    }
+    await when.we_invoke_notify_restaurant(event)
+  })
+
+  after(() => {
+    AWS.restore('Kinesis', 'putRecord')
+    AWS.restore('SNS', 'publish')
+  })
+
+  if (process.env.TEST_MODE === 'handler') {
+    it(`Should publish message to SNS`, async () => {
+      expect(isNotified).to.be.true
+    })
+
+    it(`Should publish event to Kinesis`, async () => {
+      expect(isEventPublished).to.be.true
+    })
+  }
+})
+```
+
+6. Run integration tests
 
 `STAGE=dev REGION=us-east-1 npm run test`
 
@@ -1084,7 +1148,7 @@ and see that the new test is failing
 
 because our `notify-restaurant` doesn't return any response because it doesn't need to.
 
-5. Modify `steps/when.js` to update the `viaHandler` function to handle this
+7. Modify `steps/when.js` to update the `viaHandler` function to handle this
 
 ```javascript
 const viaHandler = async (event, functionName) => {
@@ -1101,7 +1165,7 @@ const viaHandler = async (event, functionName) => {
 }
 ```
 
-6. Rerun integration tests
+8. Rerun integration tests
 
 `STAGE=dev REGION=us-east-1 npm run test`
 
