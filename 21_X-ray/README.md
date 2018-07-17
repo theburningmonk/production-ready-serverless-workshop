@@ -160,9 +160,6 @@ const getRestaurants = () => {
     }
 
     const req = https.request(options, res => {
-      console.log('statusCode:', res.statusCode)
-      console.log('headers:', res.headers)
-
       res.on('data', buffer => {
         const body = buffer.toString('utf8')
         resolve(JSON.parse(body))
