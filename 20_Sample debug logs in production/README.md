@@ -216,4 +216,8 @@ invoking via handler function search-restaurants
   7 passing (4s)
 ```
 
+6. Deploy the project
+
+`npm run sls -- deploy -s dev -r us-east-1`
+
 </p></details>

@@ -23,7 +23,7 @@ plugins:
 ```yml
 provider:
   name: aws
-  runtime: nodejs6.10
+  runtime: nodejs8.10
   tracing: true
 ```
 
@@ -81,7 +81,7 @@ To begin with, we can instrument the AWS SDK so we track how long calls to Dynam
 
 1. Install `aws-xray-sdk-core` as dependency
 
-`npm install --save aws-xray-sdk-cor`
+`npm install --save aws-xray-sdk-core`
 
 2. Modify `functions/get-restaurants.js` and replace `const AWS = require('aws-sdk')` with the following
 
