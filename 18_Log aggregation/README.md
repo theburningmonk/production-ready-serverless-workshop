@@ -40,7 +40,7 @@ which saves the project in a folder called `cloudwatch-logs-to-logzio`
 
 3. Open the `serverless.yml` and specify Logz.io's host `listener.logz.io` and port `5050`
 
-4. Set the `token` environment variable to `${ssm:/{service_name}/dev/logzio_token}`
+4. Set the `token` environment variable to `${ssm:/{service_name}/dev/logzio_token~true}`
 
 5. Deploy the functions
 
